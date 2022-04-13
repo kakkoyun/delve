@@ -27,6 +27,7 @@ type parseContext struct {
 	ptrSize     int
 	ehFrameAddr uint64
 	err         error
+	warn        error
 }
 
 // Parse takes in data (a byte slice) and returns FrameDescriptionEntries,
@@ -45,6 +46,10 @@ func Parse(data []byte, order binary.ByteOrder, staticBase uint64, ptrSize int, 
 		if pctx.err != nil {
 			return nil, pctx.err
 		}
+		//if pctx.warn != nil {
+		// TODO(kakkoyun): Figure out logging or?
+		//fmt.Println(pctx.warn)
+		//}
 	}
 
 	for i := range pctx.entries {
@@ -204,7 +209,8 @@ func parseCIE(ctx *parseContext) parsefunc {
 				b, _ := buf.ReadByte()
 				e := ptrEnc(b) &^ ptrEncIndirect
 				if !e.Supported() {
-					ctx.err = fmt.Errorf("pointer encoding not supported %#x at %#x", e, ctx.offset())
+					// TODO(kakkoyun): Is this enough to just read and skip?
+					ctx.warn = fmt.Errorf("pointer encoding not supported %#x at %#x", e, ctx.offset())
 					return nil
 				}
 				ctx.readEncodedPtr(0, buf, e)
